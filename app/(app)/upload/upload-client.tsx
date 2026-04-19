@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   FileText,
   Loader2,
@@ -32,6 +33,7 @@ function uid() {
 }
 
 export function UploadClient() {
+  const router = useRouter();
   const [phase, setPhase] = useState<Phase>("idle");
   const [dragActive, setDragActive] = useState(false);
   const [filename, setFilename] = useState<string | null>(null);
@@ -92,8 +94,38 @@ export function UploadClient() {
   }
 
   async function handleSave() {
-    toast.info("Save endpoint lands in Step 5.");
-    console.log("Would save:", { deckTitle, deckDescription, cards });
+    setPhase("saving");
+    try {
+      const res = await fetch("/api/decks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: deckTitle.trim(),
+          description: deckDescription.trim() || undefined,
+          sourceFilename: filename ?? undefined,
+          cards: cards.map(({ front, back, type, tags }) => ({
+            front: front.trim(),
+            back: back.trim(),
+            type,
+            tags,
+          })),
+        }),
+      });
+      if (!res.ok) {
+        const { error } = (await res.json().catch(() => ({ error: null }))) as {
+          error?: string;
+        };
+        throw new Error(error ?? "Failed to save deck.");
+      }
+      await res.json();
+      toast.success("Deck saved");
+      router.push("/");
+      router.refresh();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to save deck.";
+      toast.error(msg);
+      setPhase("preview");
+    }
   }
 
   if (phase === "generating") {
