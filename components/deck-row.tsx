@@ -36,8 +36,9 @@ function relativeTime(date: Date | string) {
 
 export function DeckRow({ deck, index = 0 }: { deck: DeckRowData; index?: number }) {
   const reduce = useReducedMotion();
-  const mastery =
-    deck.cardCount === 0 ? 0 : Math.round((deck.mature / deck.cardCount) * 100);
+  const studied = deck.cardCount - deck.fresh;
+  const progress =
+    deck.cardCount === 0 ? 0 : Math.round((studied / deck.cardCount) * 100);
 
   return (
     <motion.div
@@ -49,8 +50,8 @@ export function DeckRow({ deck, index = 0 }: { deck: DeckRowData; index?: number
         href={`/decks/${deck.id}`}
         className="group relative flex items-start gap-5 border-b border-zinc-200/80 py-5 transition-colors hover:bg-zinc-50/60 dark:border-zinc-800/80 dark:hover:bg-zinc-900/30"
       >
-        <ProgressRing value={mastery} size={48} stroke={3}>
-          {deck.cardCount > 0 ? `${mastery}` : "·"}
+        <ProgressRing value={progress} size={48} stroke={3}>
+          {deck.cardCount > 0 ? `${progress}` : "·"}
         </ProgressRing>
 
         <div className="min-w-0 flex-1 space-y-2">

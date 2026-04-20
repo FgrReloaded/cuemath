@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { MemoryBar } from "@/components/memory-bar";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import type { DeckDetail, DeckDetailCard } from "@/lib/decks";
 
 const MATURE = 21;
@@ -63,6 +64,8 @@ export function DeckClient({ deck }: { deck: DeckDetail }) {
     type: "basic",
   });
   const [adding, setAdding] = useState(false);
+  const [deckDeleteOpen, setDeckDeleteOpen] = useState(false);
+  const [cardToDelete, setCardToDelete] = useState<DeckDetailCard | null>(null);
 
   const refresh = () => startTransition(() => router.refresh());
 
@@ -102,12 +105,12 @@ export function DeckClient({ deck }: { deck: DeckDetail }) {
   }
 
   async function deleteDeck() {
-    if (!confirm("Delete this deck and all its cards? This can't be undone.")) return;
     const res = await fetch(`/api/decks/${deck.id}`, { method: "DELETE" });
     if (!res.ok) {
       toast.error("Could not delete deck");
       return;
     }
+    setDeckDeleteOpen(false);
     toast.success("Deck deleted");
     router.push("/");
   }
@@ -144,12 +147,12 @@ export function DeckClient({ deck }: { deck: DeckDetail }) {
   }
 
   async function deleteCard(id: string) {
-    if (!confirm("Delete this card?")) return;
     const res = await fetch(`/api/cards/${id}`, { method: "DELETE" });
     if (!res.ok) {
       toast.error("Could not delete card");
       return;
     }
+    setCardToDelete(null);
     toast.success("Card deleted");
     refresh();
   }
@@ -260,7 +263,7 @@ export function DeckClient({ deck }: { deck: DeckDetail }) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={deleteDeck}
+                    onClick={() => setDeckDeleteOpen(true)}
                     className="text-muted-foreground hover:text-red-600 dark:hover:text-red-400"
                   >
                     <Trash2 className="mr-1.5 h-3.5 w-3.5" />
@@ -429,7 +432,7 @@ export function DeckClient({ deck }: { deck: DeckDetail }) {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => deleteCard(card.id)}
+                          onClick={() => setCardToDelete(card)}
                           className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600 dark:hover:text-red-400"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -443,6 +446,34 @@ export function DeckClient({ deck }: { deck: DeckDetail }) {
           </ol>
         )}
       </section>
+
+      <ConfirmDialog
+        open={deckDeleteOpen}
+        onOpenChange={setDeckDeleteOpen}
+        title="Delete this deck?"
+        description={`"${deck.title}" and all ${deck.cards.length} card${
+          deck.cards.length === 1 ? "" : "s"
+        } will be removed. This can't be undone.`}
+        confirmLabel="Delete deck"
+        onConfirm={deleteDeck}
+      />
+
+      <ConfirmDialog
+        open={cardToDelete !== null}
+        onOpenChange={(v) => !v && setCardToDelete(null)}
+        title="Delete this card?"
+        description={
+          cardToDelete
+            ? cardToDelete.front.length > 120
+              ? `${cardToDelete.front.slice(0, 120)}…`
+              : cardToDelete.front
+            : undefined
+        }
+        confirmLabel="Delete card"
+        onConfirm={async () => {
+          if (cardToDelete) await deleteCard(cardToDelete.id);
+        }}
+      />
     </div>
   );
 }
