@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
+import { LogoMark } from "@/components/logo";
 import { UserMenu } from "@/components/user-menu";
 
 function NavLink({
@@ -46,13 +47,13 @@ export function Nav({ email, dueNow }: { email: string; dueNow: number }) {
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-8">
         <Link
           href="/"
-          className="group flex items-baseline gap-1.5"
+          className="group flex items-center gap-2"
           aria-label="Mnemo home"
         >
+          <LogoMark className="h-5 w-5 text-foreground transition-transform duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:-translate-y-px group-hover:rotate-[-4deg]" />
           <span className="text-[15px] font-semibold tracking-tight text-foreground">
             Mnemo
           </span>
-          <span className="h-1 w-1 translate-y-[-1px] rounded-full bg-[var(--brand)] transition-transform group-hover:scale-125" />
         </Link>
 
         <nav className="flex items-center gap-6">
