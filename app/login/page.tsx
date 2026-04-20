@@ -1,9 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Sparkles } from "lucide-react";
-import { signInWithEmail } from "./actions";
+import { LoginForm } from "./login-form";
 
 type SearchParams = Promise<{ sent?: string; email?: string; error?: string; next?: string }>;
 
@@ -29,25 +26,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
               <p className="text-xs text-zinc-500">You can close this tab.</p>
             </div>
           ) : (
-            <form action={signInWithEmail} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                />
-              </div>
-              {error && (
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-              )}
-              <Button type="submit" className="w-full">
-                Send magic link
-              </Button>
-            </form>
+            <LoginForm error={error} />
           )}
         </CardContent>
       </Card>
