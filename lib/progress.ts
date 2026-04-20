@@ -91,10 +91,10 @@ export async function getProgress(userId: string): Promise<ProgressData> {
   const byDay = new Map(dayRows.map((r) => [r.day, Number(r.count)]));
   const heatmap: HeatmapDay[] = [];
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  today.setUTCHours(0, 0, 0, 0);
   for (let i = 90; i >= 0; i--) {
     const d = new Date(today);
-    d.setDate(d.getDate() - i);
+    d.setUTCDate(d.getUTCDate() - i);
     const key = d.toISOString().slice(0, 10);
     heatmap.push({ date: key, count: byDay.get(key) ?? 0 });
   }

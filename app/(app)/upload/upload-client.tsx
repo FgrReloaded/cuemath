@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   FileText,
   Loader2,
@@ -31,6 +32,13 @@ type EditableCard = GeneratedCard & { id: string };
 function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
+
+const GENERATION_PHASES = [
+  { at: 0, label: "Reading your PDF", sub: "Pulling text from every page." },
+  { at: 4500, label: "Finding what matters", sub: "Spotting the concepts, definitions, and claims worth remembering." },
+  { at: 11000, label: "Writing the deck", sub: "Drafting atomic questions — one idea per card." },
+  { at: 20000, label: "Polishing", sub: "Dropping the weak ones, tightening the rest." },
+];
 
 export function UploadClient() {
   const router = useRouter();
@@ -118,7 +126,7 @@ export function UploadClient() {
         throw new Error(error ?? "Failed to save deck.");
       }
       await res.json();
-      toast.success("Deck saved");
+      toast.success(`Deck saved · ${cards.length} cards ready`);
       router.push("/");
       router.refresh();
     } catch (err) {
@@ -129,28 +137,7 @@ export function UploadClient() {
   }
 
   if (phase === "generating") {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-          <div className="relative">
-            <div className="absolute inset-0 animate-ping rounded-full bg-zinc-900/20 dark:bg-white/10" />
-            <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
-              <Sparkles className="h-6 w-6" />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold tracking-tight">Reading your PDF</h3>
-            <p className="text-sm text-zinc-500">
-              {filename ?? "Analyzing content and writing cards…"}
-            </p>
-          </div>
-          <div className="mt-2 flex items-center gap-2 text-xs text-zinc-400">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            This usually takes 15–45 seconds
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <GeneratingState filename={filename} />;
   }
 
   if (phase === "preview" || phase === "saving") {
@@ -163,7 +150,10 @@ export function UploadClient() {
               <span>From {filename}</span>
               <span>·</span>
               <span>
-                {cards.length} card{cards.length === 1 ? "" : "s"} generated
+                <strong className="font-medium text-zinc-900 dark:text-zinc-100">
+                  {cards.length}
+                </strong>{" "}
+                card{cards.length === 1 ? "" : "s"} generated
               </span>
             </div>
             <div className="space-y-3">
@@ -208,19 +198,31 @@ export function UploadClient() {
         </div>
 
         <div className="grid gap-3">
-          {cards.map((card, i) => (
-            <CardEditor
-              key={card.id}
-              index={i}
-              card={card}
-              onChange={(next) =>
-                setCards((cs) => cs.map((c) => (c.id === card.id ? { ...c, ...next } : c)))
-              }
-              onDelete={() =>
-                setCards((cs) => cs.filter((c) => c.id !== card.id))
-              }
-            />
-          ))}
+          <AnimatePresence initial={false}>
+            {cards.map((card, i) => (
+              <motion.div
+                key={card.id}
+                layout
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
+              >
+                <CardEditor
+                  index={i}
+                  card={card}
+                  onChange={(next) =>
+                    setCards((cs) =>
+                      cs.map((c) => (c.id === card.id ? { ...c, ...next } : c)),
+                    )
+                  }
+                  onDelete={() =>
+                    setCards((cs) => cs.filter((c) => c.id !== card.id))
+                  }
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
 
         <div className="sticky bottom-4 flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white/90 p-3 shadow-lg backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
@@ -247,60 +249,190 @@ export function UploadClient() {
   }
 
   return (
-    <Card
-      className={`border-2 border-dashed transition-colors ${
-        dragActive
-          ? "border-zinc-900 bg-zinc-50 dark:border-white dark:bg-zinc-900/50"
-          : "border-zinc-200 dark:border-zinc-800"
-      }`}
+    <motion.div
+      animate={{ scale: dragActive ? 1.01 : 1 }}
+      transition={{ type: "spring", stiffness: 300, damping: 24 }}
     >
-      <CardContent
-        onDragEnter={(e) => {
-          e.preventDefault();
-          setDragActive(true);
-        }}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragActive(true);
-        }}
-        onDragLeave={(e) => {
-          e.preventDefault();
-          setDragActive(false);
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragActive(false);
-          const file = e.dataTransfer.files?.[0];
-          if (file) void handleFile(file);
-        }}
-        className="flex flex-col items-center justify-center gap-4 py-20 text-center"
+      <Card
+        className={`border-2 border-dashed transition-colors ${
+          dragActive
+            ? "border-zinc-900 bg-zinc-50 dark:border-white dark:bg-zinc-900/50"
+            : "border-zinc-200 dark:border-zinc-800"
+        }`}
       >
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-zinc-900">
-          <UploadIcon className="h-6 w-6 text-zinc-600 dark:text-zinc-300" />
-        </div>
-        <div className="space-y-1.5">
-          <h3 className="text-lg font-semibold tracking-tight">
-            Drop a PDF to build your deck
-          </h3>
-          <p className="max-w-sm text-sm text-zinc-600 dark:text-zinc-400">
-            Class notes, a chapter, a research paper — up to 15 MB. We&apos;ll do the
-            rest.
-          </p>
-        </div>
-        <div className="mt-2 flex items-center gap-3">
-          <Button onClick={() => fileRef.current?.click()}>Choose file</Button>
-          <span className="text-xs text-zinc-400">or drag &amp; drop</span>
-        </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="application/pdf"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
+        <CardContent
+          onDragEnter={(e) => {
+            e.preventDefault();
+            setDragActive(true);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragActive(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            setDragActive(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragActive(false);
+            const file = e.dataTransfer.files?.[0];
             if (file) void handleFile(file);
           }}
-        />
+          className="flex flex-col items-center justify-center gap-4 py-20 text-center"
+        >
+          <motion.div
+            className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-zinc-900"
+            animate={
+              dragActive
+                ? { y: [-2, -6, -2], rotate: [-2, 2, -2] }
+                : { y: 0, rotate: 0 }
+            }
+            transition={
+              dragActive
+                ? { duration: 1.1, repeat: Infinity, ease: "easeInOut" }
+                : { duration: 0.25 }
+            }
+          >
+            <UploadIcon className="h-6 w-6 text-zinc-600 dark:text-zinc-300" />
+          </motion.div>
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-semibold tracking-tight">
+              {dragActive ? "Drop it here" : "Drop a PDF to build your deck"}
+            </h3>
+            <p className="max-w-sm text-sm text-zinc-600 dark:text-zinc-400">
+              Class notes, a chapter, a research paper — up to 15 MB. We&apos;ll do
+              the rest.
+            </p>
+          </div>
+          <div className="mt-2 flex items-center gap-3">
+            <Button onClick={() => fileRef.current?.click()}>Choose file</Button>
+            <span className="text-xs text-zinc-400">or drag &amp; drop</span>
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleFile(file);
+            }}
+          />
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+function GeneratingState({ filename }: { filename: string | null }) {
+  const reduce = useReducedMotion();
+  const [phaseIdx, setPhaseIdx] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const start = performance.now();
+    const tick = setInterval(() => {
+      const e = performance.now() - start;
+      setElapsed(e);
+      const next = GENERATION_PHASES.findIndex((p, i) => {
+        const nextAt = GENERATION_PHASES[i + 1]?.at ?? Infinity;
+        return e >= p.at && e < nextAt;
+      });
+      if (next >= 0) setPhaseIdx(next);
+    }, 250);
+    return () => clearInterval(tick);
+  }, []);
+
+  const current = GENERATION_PHASES[phaseIdx];
+  const softEstimate = Math.min(92, Math.round((elapsed / 28000) * 100));
+
+  return (
+    <Card>
+      <CardContent className="flex flex-col items-center justify-center gap-5 py-20 text-center">
+        <div className="relative">
+          {!reduce && (
+            <>
+              <motion.span
+                className="absolute inset-0 rounded-full"
+                style={{ background: "oklch(0.82 0.12 80 / 0.25)" }}
+                animate={{ scale: [1, 1.8, 1], opacity: [0.5, 0, 0.5] }}
+                transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+              />
+              <motion.span
+                className="absolute inset-0 rounded-full"
+                style={{ background: "oklch(0.78 0.14 55 / 0.18)" }}
+                animate={{ scale: [1, 2.2, 1], opacity: [0.5, 0, 0.5] }}
+                transition={{
+                  duration: 2.4,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 0.8,
+                }}
+              />
+            </>
+          )}
+          <motion.div
+            className="relative flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+            animate={reduce ? undefined : { rotate: [0, 8, -8, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Sparkles className="h-6 w-6" />
+          </motion.div>
+        </div>
+
+        <div className="min-h-[58px] space-y-1">
+          <AnimatePresence mode="wait">
+            <motion.h3
+              key={current.label}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.25 }}
+              className="text-lg font-semibold tracking-tight"
+            >
+              {current.label}
+            </motion.h3>
+          </AnimatePresence>
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={current.sub}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.25, delay: 0.05 }}
+              className="mx-auto max-w-sm text-sm text-zinc-500 dark:text-zinc-400"
+            >
+              {current.sub}
+            </motion.p>
+          </AnimatePresence>
+        </div>
+
+        <div className="w-56 space-y-2">
+          <div className="relative h-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+            <motion.div
+              className="h-full rounded-full bg-zinc-900 dark:bg-white"
+              initial={{ width: "0%" }}
+              animate={{ width: `${softEstimate}%` }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+            />
+            {!reduce && (
+              <motion.div
+                aria-hidden
+                className="absolute inset-y-0 w-10 bg-gradient-to-r from-transparent via-white/80 to-transparent dark:via-white/40"
+                animate={{ x: ["-40px", "224px"] }}
+                transition={{
+                  duration: 1.6,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+            )}
+          </div>
+          <p className="truncate text-[11px] text-zinc-400">
+            {filename ?? "Working on your file"}
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
@@ -346,7 +478,9 @@ function CardEditor({
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wide text-zinc-500">Front</Label>
+            <Label className="text-xs uppercase tracking-wide text-zinc-500">
+              Front
+            </Label>
             <Textarea
               value={card.front}
               onChange={(e) => onChange({ front: e.target.value })}
@@ -355,7 +489,9 @@ function CardEditor({
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wide text-zinc-500">Back</Label>
+            <Label className="text-xs uppercase tracking-wide text-zinc-500">
+              Back
+            </Label>
             <Textarea
               value={card.back}
               onChange={(e) => onChange({ back: e.target.value })}

@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import type { HeatmapDay } from "@/lib/progress";
 
 function intensity(count: number, max: number): number {
@@ -18,13 +22,23 @@ const LEVELS = [
   "bg-emerald-600 dark:bg-emerald-500",
 ];
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+type Hovered = { day: HeatmapDay; x: number; y: number } | null;
 
 export function Heatmap({ days }: { days: HeatmapDay[] }) {
+  const reduce = useReducedMotion();
+  const [hovered, setHovered] = useState<Hovered>(null);
+
+  if (days.length === 0) return null;
+
   const max = Math.max(1, ...days.map((d) => d.count));
 
   const firstDay = new Date(days[0].date);
-  const leadingEmpty = firstDay.getDay();
+  const leadingEmpty = firstDay.getUTCDay();
   const padded: (HeatmapDay | null)[] = [
     ...Array.from({ length: leadingEmpty }, () => null),
     ...days,
@@ -39,7 +53,7 @@ export function Heatmap({ days }: { days: HeatmapDay[] }) {
   weeks.forEach((week, wIdx) => {
     const firstReal = week.find((d): d is HeatmapDay => d !== null);
     if (!firstReal) return;
-    const m = new Date(firstReal.date).getMonth();
+    const m = new Date(firstReal.date).getUTCMonth();
     if (m !== lastMonth) {
       monthLabels.push({ weekIdx: wIdx, label: MONTHS[m] });
       lastMonth = m;
@@ -47,7 +61,7 @@ export function Heatmap({ days }: { days: HeatmapDay[] }) {
   });
 
   return (
-    <div className="space-y-2">
+    <div data-heatmap className="relative space-y-2">
       <div className="flex gap-[3px] pl-6 text-[10px] text-zinc-500">
         {weeks.map((_, wIdx) => {
           const label = monthLabels.find((m) => m.weekIdx === wIdx);
@@ -69,26 +83,45 @@ export function Heatmap({ days }: { days: HeatmapDay[] }) {
           <div className="h-[11px] leading-[11px]">Fri</div>
           <div className="h-[11px]" />
         </div>
-        <div className="flex gap-[3px]">
+        <div
+          className="flex gap-[3px]"
+          onMouseLeave={() => setHovered(null)}
+        >
           {weeks.map((week, wIdx) => (
             <div key={wIdx} className="flex flex-col gap-[3px]">
               {Array.from({ length: 7 }).map((_, dIdx) => {
                 const day = week[dIdx];
                 if (!day) {
                   return (
-                    <div key={dIdx} className="h-[11px] w-[11px] rounded-sm bg-transparent" />
+                    <div
+                      key={dIdx}
+                      className="h-[11px] w-[11px] rounded-sm bg-transparent"
+                    />
                   );
                 }
                 const level = intensity(day.count, max);
-                const dateLabel = new Date(day.date).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                });
+                const delay = reduce ? 0 : (wIdx + dIdx) * 0.006;
                 return (
-                  <div
+                  <motion.div
                     key={dIdx}
-                    title={`${dateLabel}: ${day.count} review${day.count === 1 ? "" : "s"}`}
-                    className={`h-[11px] w-[11px] rounded-sm ${LEVELS[level]}`}
+                    initial={reduce ? false : { opacity: 0, scale: 0.7 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3, delay, ease: [0.2, 0.8, 0.2, 1] }}
+                    whileHover={reduce ? undefined : { scale: 1.35 }}
+                    onMouseEnter={(e) => {
+                      const rect = (
+                        e.currentTarget as HTMLElement
+                      ).getBoundingClientRect();
+                      const parent = (
+                        e.currentTarget.closest("[data-heatmap]") as HTMLElement | null
+                      )?.getBoundingClientRect();
+                      setHovered({
+                        day,
+                        x: rect.left - (parent?.left ?? 0) + rect.width / 2,
+                        y: rect.top - (parent?.top ?? 0),
+                      });
+                    }}
+                    className={`h-[11px] w-[11px] rounded-sm transition-shadow hover:shadow-[0_0_0_1.5px_oklch(0_0_0/0.15)] dark:hover:shadow-[0_0_0_1.5px_oklch(1_0_0/0.25)] ${LEVELS[level]}`}
                   />
                 );
               })}
@@ -103,6 +136,33 @@ export function Heatmap({ days }: { days: HeatmapDay[] }) {
           <div key={i} className={`h-[11px] w-[11px] rounded-sm ${cls}`} />
         ))}
         <span>More</span>
+      </div>
+
+      <div
+        className="pointer-events-none absolute inset-0"
+        aria-hidden
+      >
+        {hovered && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.15 }}
+            style={{ left: hovered.x, top: hovered.y - 8 }}
+            className="absolute -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md border border-zinc-200 bg-white px-2 py-1 text-[11px] shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+          >
+            <span className="font-medium text-zinc-900 dark:text-zinc-100">
+              {hovered.day.count} review{hovered.day.count === 1 ? "" : "s"}
+            </span>
+            <span className="ml-1.5 text-zinc-500">
+              {new Date(hovered.day.date).toLocaleDateString(undefined, {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                timeZone: "UTC",
+              })}
+            </span>
+          </motion.div>
+        )}
       </div>
     </div>
   );

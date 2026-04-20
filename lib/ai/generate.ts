@@ -15,7 +15,10 @@ export const CardSchema = z.object({
   type: z
     .enum(["basic", "cloze"])
     .describe("'basic' Q/A or 'cloze' with {{c1::…}} deletions."),
-  tags: z.array(z.string().min(1).max(30)).max(3),
+  tags: z.preprocess(
+    (v) => (Array.isArray(v) ? v.slice(0, 5) : v),
+    z.array(z.string().min(1).max(30)).max(5),
+  ),
 });
 
 export const DeckSchema = z.object({
