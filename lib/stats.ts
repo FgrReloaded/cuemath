@@ -62,6 +62,9 @@ export type DeckSummary = {
   description: string | null;
   cardCount: number;
   dueNow: number;
+  mature: number;
+  learning: number;
+  fresh: number;
   updatedAt: Date;
 };
 
@@ -76,6 +79,12 @@ export async function getUserDecks(userId: string): Promise<DeckSummary[]> {
       dueNow: sql<number>`count(distinct ${cards.id}) filter (where ${reviews.nextReviewAt} <= NOW())`.as(
         "due_now",
       ),
+      mature: sql<number>`count(distinct ${cards.id}) filter (where ${reviews.intervalDays} >= ${MATURE_THRESHOLD_DAYS})`.as(
+        "mature",
+      ),
+      learning: sql<number>`count(distinct ${cards.id}) filter (where ${reviews.intervalDays} > 0 and ${reviews.intervalDays} < ${MATURE_THRESHOLD_DAYS})`.as(
+        "learning",
+      ),
     })
     .from(decks)
     .leftJoin(cards, eq(cards.deckId, decks.id))
@@ -84,12 +93,21 @@ export async function getUserDecks(userId: string): Promise<DeckSummary[]> {
     .groupBy(decks.id)
     .orderBy(sql`${decks.updatedAt} desc`);
 
-  return rows.map((r) => ({
-    id: r.id,
-    title: r.title,
-    description: r.description,
-    cardCount: Number(r.cardCount ?? 0),
-    dueNow: Number(r.dueNow ?? 0),
-    updatedAt: r.updatedAt,
-  }));
+  return rows.map((r) => {
+    const cardCount = Number(r.cardCount ?? 0);
+    const mature = Number(r.mature ?? 0);
+    const learning = Number(r.learning ?? 0);
+    const fresh = Math.max(0, cardCount - mature - learning);
+    return {
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      cardCount,
+      dueNow: Number(r.dueNow ?? 0),
+      mature,
+      learning,
+      fresh,
+      updatedAt: r.updatedAt,
+    };
+  });
 }

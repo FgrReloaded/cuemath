@@ -1,129 +1,58 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, Flame, Sparkles, Target, Upload } from "lucide-react";
+import { ArrowRight, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { MemoryBar } from "@/components/memory-bar";
+import { DeckRow } from "@/components/deck-row";
 import { requireUser } from "@/lib/supabase/guards";
 import { getDashboardStats, getUserDecks } from "@/lib/stats";
 
-function StatCard({
-  label,
-  value,
-  icon,
-  tone = "default",
-}: {
-  label: string;
-  value: number | string;
-  icon: React.ReactNode;
-  tone?: "default" | "accent";
-}) {
-  return (
-    <Card
-      className={
-        tone === "accent"
-          ? "border-zinc-900/10 bg-gradient-to-br from-zinc-900 to-zinc-800 text-white dark:from-white dark:to-zinc-100 dark:text-zinc-900"
-          : ""
-      }
-    >
-      <CardContent className="flex items-center justify-between p-5">
-        <div className="space-y-1">
-          <p
-            className={
-              tone === "accent"
-                ? "text-xs font-medium uppercase tracking-wide text-white/70 dark:text-zinc-700"
-                : "text-xs font-medium uppercase tracking-wide text-zinc-500"
-            }
-          >
-            {label}
-          </p>
-          <p className="text-3xl font-semibold tracking-tight">{value}</p>
-        </div>
-        <div
-          className={
-            tone === "accent"
-              ? "flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 dark:bg-zinc-900/10"
-              : "flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-          }
-        >
-          {icon}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function EmptyState() {
   return (
-    <Card className="border-dashed">
-      <CardContent className="flex flex-col items-center justify-center gap-4 py-16 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-zinc-900">
-          <Sparkles className="h-6 w-6 text-zinc-600 dark:text-zinc-300" />
-        </div>
-        <div className="space-y-1.5">
-          <h3 className="text-lg font-semibold tracking-tight">
-            Your first deck is a PDF away
-          </h3>
-          <p className="max-w-md text-sm text-zinc-600 dark:text-zinc-400">
-            Drop in a chapter, notes, or a textbook. Mnemo reads it and writes the
-            flashcards for you.
+    <div className="border-t border-border/70 pt-16">
+      <div className="grid items-start gap-10 md:grid-cols-[3fr_2fr]">
+        <div className="space-y-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            First deck
           </p>
-        </div>
-        <Button asChild className="mt-2">
-          <Link href="/upload">
-            <Upload className="mr-2 h-4 w-4" />
-            Upload a PDF
-          </Link>
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
-
-function DeckCard({
-  deck,
-}: {
-  deck: {
-    id: string;
-    title: string;
-    description: string | null;
-    cardCount: number;
-    dueNow: number;
-  };
-}) {
-  return (
-    <Card className="group transition-colors hover:border-zinc-300 dark:hover:border-zinc-700">
-      <CardContent className="flex h-full flex-col gap-4 p-5">
-        <div className="flex-1 space-y-1.5">
-          <h3 className="line-clamp-2 font-semibold tracking-tight">{deck.title}</h3>
-          {deck.description && (
-            <p className="line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">
-              {deck.description}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-zinc-500">
-            <span>{deck.cardCount} cards</span>
-            {deck.dueNow > 0 && (
-              <Badge variant="secondary" className="font-normal">
-                {deck.dueNow} due
-              </Badge>
-            )}
-          </div>
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="h-8 opacity-0 transition-opacity group-hover:opacity-100"
-          >
-            <Link href={`/decks/${deck.id}`}>
-              Open
-              <ArrowRight className="ml-1 h-3.5 w-3.5" />
+          <h3 className="text-2xl font-medium tracking-tight text-foreground">
+            Drop in a PDF <span className="italic font-serif">—</span> Mnemo does
+            the rest.
+          </h3>
+          <p className="max-w-md text-sm text-muted-foreground">
+            Lecture notes, a textbook chapter, a research paper. We read the
+            material and shape it into cards you&apos;ll actually remember.
+          </p>
+          <Button asChild className="mt-2">
+            <Link href="/upload">
+              <Upload className="mr-2 h-4 w-4" />
+              Upload a PDF
             </Link>
           </Button>
         </div>
-      </CardContent>
-    </Card>
+
+        <aside className="relative hidden md:block">
+          <div className="space-y-3 rounded-lg border border-dashed border-border/70 bg-card/30 p-5 text-sm">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              What you&apos;ll get
+            </p>
+            <ol className="space-y-2 text-muted-foreground">
+              <li className="flex gap-3">
+                <span className="tabular-nums text-[var(--brand)]">01</span>
+                <span>A deck of 12–25 cards shaped like the source.</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="tabular-nums text-[var(--brand)]">02</span>
+                <span>SM-2 scheduling so reviews stick.</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="tabular-nums text-[var(--brand)]">03</span>
+                <span>A streak to keep you honest.</span>
+              </li>
+            </ol>
+          </div>
+        </aside>
+      </div>
+    </div>
   );
 }
 
@@ -135,74 +64,137 @@ export default async function DashboardPage() {
   ]);
 
   const greeting = user.email?.split("@")[0] ?? "there";
+  const hasDecks = decks.length > 0;
+
+  const hero =
+    stats.dueNow > 0
+      ? {
+          eyebrow: `${greeting}, today's stack`,
+          headline: `${stats.dueNow}`,
+          headlineSuffix: stats.dueNow === 1 ? "card" : "cards",
+          tail: "ready for review",
+        }
+      : hasDecks
+        ? {
+            eyebrow: `welcome back, ${greeting}`,
+            headline: "Caught",
+            headlineSuffix: "up",
+            tail: "no cards due — your future self thanks you.",
+          }
+        : {
+            eyebrow: `hello, ${greeting}`,
+            headline: "Empty",
+            headlineSuffix: "shelves",
+            tail: "start with one PDF — we'll handle the shaping.",
+          };
 
   return (
-    <div className="space-y-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-1.5">
-          <p className="text-sm text-zinc-500">Welcome back, {greeting}</p>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            {stats.dueNow > 0
-              ? `${stats.dueNow} card${stats.dueNow === 1 ? "" : "s"} ready for review`
-              : "You're all caught up"}
+    <div className="space-y-20">
+      <section className="grid gap-10 md:grid-cols-12 md:gap-12">
+        <div className="md:col-span-8 md:col-start-1 space-y-6">
+          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
+            {hero.eyebrow}
+          </p>
+          <h1 className="font-sans text-[clamp(2.75rem,7vw,5rem)] font-medium leading-[0.95] tracking-[-0.035em] text-foreground">
+            <span className="tabular-nums">{hero.headline}</span>{" "}
+            <span className="italic font-serif font-normal text-muted-foreground">
+              {hero.headlineSuffix}
+            </span>
           </h1>
+          <p className="max-w-md text-[15px] text-muted-foreground">{hero.tail}</p>
+
+          {stats.dueNow > 0 && (
+            <div className="pt-2">
+              <Button asChild size="lg" className="group">
+                <Link href="/study">
+                  Start studying
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              </Button>
+            </div>
+          )}
         </div>
-        {stats.dueNow > 0 && (
-          <Button asChild size="lg">
-            <Link href="/study">
-              Start studying
-              <ArrowRight className="ml-1.5 h-4 w-4" />
-            </Link>
-          </Button>
-        )}
-      </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
-          label="Due now"
-          value={stats.dueNow}
-          icon={<Flame className="h-5 w-5" />}
-          tone={stats.dueNow > 0 ? "accent" : "default"}
-        />
-        <StatCard
-          label="Mastered"
-          value={stats.mastered}
-          icon={<Target className="h-5 w-5" />}
-        />
-        <StatCard
-          label="Learning"
-          value={stats.learning}
-          icon={<Sparkles className="h-5 w-5" />}
-        />
-        <StatCard
-          label="Total cards"
-          value={stats.cardCount}
-          icon={<BookOpen className="h-5 w-5" />}
-        />
-      </div>
+        <aside className="md:col-span-4 md:col-start-9 md:pt-2">
+          <div className="space-y-5 border-l border-border/60 pl-6 md:sticky md:top-24">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                Memory graph
+              </p>
+              <p className="mt-2 flex items-baseline gap-1.5 font-sans">
+                <span className="text-4xl font-medium tracking-tight tabular-nums">
+                  {stats.cardCount}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  card{stats.cardCount === 1 ? "" : "s"}
+                </span>
+              </p>
+            </div>
 
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold tracking-tight">Your decks</h2>
-          {decks.length > 0 && (
-            <Button asChild variant="outline" size="sm">
+            <MemoryBar
+              mature={stats.mastered}
+              learning={stats.learning}
+              fresh={Math.max(0, stats.cardCount - stats.mastered - stats.learning)}
+            />
+
+            <div className="grid grid-cols-2 gap-3 pt-2 text-xs">
+              <div>
+                <p className="uppercase tracking-[0.16em] text-muted-foreground">
+                  Decks
+                </p>
+                <p className="mt-1 text-lg font-medium tabular-nums">
+                  {stats.deckCount}
+                </p>
+              </div>
+              <div>
+                <p className="uppercase tracking-[0.16em] text-muted-foreground">
+                  Due
+                </p>
+                <p className="mt-1 text-lg font-medium tabular-nums text-[var(--brand)]">
+                  {stats.dueNow}
+                </p>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      {hasDecks ? (
+        <section>
+          <div className="flex items-end justify-between border-b border-border/70 pb-4">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                Shelf
+              </p>
+              <h2 className="mt-1 text-xl font-medium tracking-tight">
+                {decks.length} deck{decks.length === 1 ? "" : "s"}
+              </h2>
+            </div>
+            <Button asChild variant="ghost" size="sm" className="group">
               <Link href="/upload">
                 <Upload className="mr-1.5 h-3.5 w-3.5" />
                 New deck
               </Link>
             </Button>
-          )}
-        </div>
-        {decks.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {decks.map((deck) => (
-              <DeckCard key={deck.id} deck={deck} />
+          </div>
+          <div>
+            {decks.map((deck, i) => (
+              <DeckRow key={deck.id} deck={deck} index={i} />
             ))}
           </div>
-        )}
-      </section>
+        </section>
+      ) : (
+        <EmptyState />
+      )}
+
+      <footer className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border/60 pt-5 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+        <span>Mnemo</span>
+        <span className="h-1 w-1 rounded-full bg-border" />
+        <span>spaced repetition, but patient</span>
+        <span className="ml-auto tabular-nums normal-case tracking-normal text-muted-foreground/70">
+          signed in as {user.email}
+        </span>
+      </footer>
     </div>
   );
 }

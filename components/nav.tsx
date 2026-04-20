@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { motion } from "motion/react";
 import { UserMenu } from "@/components/user-menu";
 
 function NavLink({
@@ -16,44 +15,71 @@ function NavLink({
   active: boolean;
 }) {
   return (
-    <Button
-      asChild
-      variant="ghost"
-      size="sm"
-      className={
+    <Link
+      href={href}
+      className={`relative px-2 py-1 text-sm tracking-tight transition-colors ${
         active
-          ? "text-zinc-900 dark:text-white"
-          : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-      }
+          ? "text-zinc-900 dark:text-zinc-50"
+          : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-zinc-200"
+      }`}
     >
-      <Link href={href}>{label}</Link>
-    </Button>
+      {label}
+      {active && (
+        <motion.span
+          layoutId="nav-dot"
+          className="absolute -bottom-1 left-1/2 h-[5px] w-[5px] -translate-x-1/2 rounded-full bg-[var(--brand)]"
+          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+        />
+      )}
+    </Link>
   );
 }
 
-export function Nav({ email }: { email: string }) {
+export function Nav({ email, dueNow }: { email: string; dueNow: number }) {
   const pathname = usePathname();
   const isDecks = pathname === "/" || pathname.startsWith("/decks");
   const isStats = pathname.startsWith("/stats");
+  const isUpload = pathname.startsWith("/upload");
 
   return (
-    <header className="sticky top-0 z-40 border-b border-zinc-200/70 bg-white/80 backdrop-blur-md dark:border-zinc-800/70 dark:bg-zinc-950/80">
-      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
-            <Sparkles className="h-3.5 w-3.5" />
+    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-8">
+        <Link
+          href="/"
+          className="group flex items-baseline gap-1.5"
+          aria-label="Mnemo home"
+        >
+          <span className="text-[15px] font-semibold tracking-tight text-foreground">
+            Mnemo
           </span>
-          <span className="font-semibold tracking-tight">Mnemo</span>
+          <span className="h-1 w-1 translate-y-[-1px] rounded-full bg-[var(--brand)] transition-transform group-hover:scale-125" />
         </Link>
-        <nav className="flex items-center gap-1">
-          <NavLink href="/" label="Decks" active={isDecks} />
-          <NavLink href="/stats" label="Stats" active={isStats} />
-          <Button asChild size="sm" className="ml-2">
-            <Link href="/upload">New deck</Link>
-          </Button>
-          <div className="ml-2">
-            <UserMenu email={email} />
+
+        <nav className="flex items-center gap-6">
+          <div className="flex items-center gap-5">
+            <NavLink href="/" label="Decks" active={isDecks} />
+            <NavLink href="/stats" label="Stats" active={isStats} />
+            <NavLink href="/upload" label="Upload" active={isUpload} />
           </div>
+
+          {dueNow > 0 && (
+            <Link
+              href="/study"
+              className="group relative hidden items-center gap-2 rounded-full border border-border/70 bg-card px-3 py-1 text-xs font-medium tabular-nums text-foreground transition-colors hover:border-[var(--brand)]/50 sm:flex"
+            >
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--brand)]/70" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--brand)]" />
+              </span>
+              <span>{dueNow} due</span>
+              <span className="text-muted-foreground transition-colors group-hover:text-foreground">
+                → study
+              </span>
+            </Link>
+          )}
+
+          <div className="h-5 w-px bg-border/70" />
+          <UserMenu email={email} />
         </nav>
       </div>
     </header>

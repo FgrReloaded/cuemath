@@ -11,10 +11,9 @@ import {
   useTransform,
   type Variants,
 } from "motion/react";
-import { ArrowRight, Check, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Confetti } from "@/components/confetti";
 import { useCountUp } from "@/lib/use-count-up";
 import type { DueCard } from "@/lib/study";
@@ -23,7 +22,7 @@ type RatingMeta = {
   label: string;
   hint: string;
   key: "1" | "2" | "3" | "4";
-  className: string;
+  dot: string;
   flash: string;
 };
 
@@ -32,32 +31,28 @@ const RATINGS: Record<0 | 1 | 2 | 3, RatingMeta> = {
     label: "Again",
     hint: "< 10 min",
     key: "1",
-    className:
-      "border-rose-200 text-rose-700 hover:bg-rose-50 hover:border-rose-300 dark:border-rose-900/60 dark:text-rose-400 dark:hover:bg-rose-950/40",
+    dot: "bg-rose-500",
     flash: "oklch(0.78 0.14 20 / 0.18)",
   },
   1: {
     label: "Hard",
     hint: "short",
     key: "2",
-    className:
-      "border-amber-200 text-amber-700 hover:bg-amber-50 hover:border-amber-300 dark:border-amber-900/60 dark:text-amber-400 dark:hover:bg-amber-950/40",
+    dot: "bg-amber-500",
     flash: "oklch(0.82 0.14 80 / 0.18)",
   },
   2: {
     label: "Good",
     hint: "normal",
     key: "3",
-    className:
-      "border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 dark:border-emerald-900/60 dark:text-emerald-400 dark:hover:bg-emerald-950/40",
+    dot: "bg-emerald-500",
     flash: "oklch(0.78 0.14 150 / 0.18)",
   },
   3: {
     label: "Easy",
     hint: "longer",
     key: "4",
-    className:
-      "border-sky-200 text-sky-700 hover:bg-sky-50 hover:border-sky-300 dark:border-sky-900/60 dark:text-sky-400 dark:hover:bg-sky-950/40",
+    dot: "bg-sky-500",
     flash: "oklch(0.78 0.13 240 / 0.18)",
   },
 };
@@ -180,70 +175,85 @@ export function StudyClient({ initialCards }: { initialCards: DueCard[] }) {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
-      <div className="mb-6 space-y-2">
-        <div className="flex items-center justify-between text-xs text-zinc-500">
-          <span className="truncate">{current.deckTitle}</span>
+      <header className="mb-10 space-y-4">
+        <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+          <Link
+            href="/"
+            className="transition-colors hover:text-foreground"
+          >
+            ← Exit
+          </Link>
+          <span className="truncate px-3 normal-case tracking-normal text-foreground">
+            {current.deckTitle}
+          </span>
           <span className="tabular-nums">
-            <span className="text-zinc-900 dark:text-zinc-100">{idx + 1}</span>
-            <span className="mx-1 text-zinc-300 dark:text-zinc-700">/</span>
-            {queue.length}
+            <span className="text-foreground">
+              {String(idx + 1).padStart(2, "0")}
+            </span>
+            <span className="mx-1 opacity-40">/</span>
+            {String(queue.length).padStart(2, "0")}
           </span>
         </div>
-        <div className="relative h-1 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+        <div className="relative h-px w-full bg-border/70">
           <motion.div
-            className="h-full rounded-full bg-zinc-900 dark:bg-white"
+            className="absolute inset-y-0 left-0 h-px bg-[var(--brand)]"
             style={{ width: progressWidth }}
           />
           <motion.div
             key={idx}
             aria-hidden
-            className="absolute inset-y-0 w-16 bg-gradient-to-r from-transparent via-white/70 to-transparent dark:via-white/30"
+            className="absolute inset-y-[-2px] w-12 bg-gradient-to-r from-transparent via-[var(--brand)]/60 to-transparent"
             initial={{ x: "-100%", opacity: 0 }}
-            animate={{ x: "200%", opacity: [0, 1, 0] }}
+            animate={{ x: "400%", opacity: [0, 1, 0] }}
             transition={{ duration: 0.9, ease: [0.2, 0.8, 0.2, 1] }}
           />
         </div>
-      </div>
+      </header>
 
-      <div className="relative flex-1 min-h-[360px]" style={{ perspective: 1400 }}>
+      <div
+        className="relative flex flex-1 items-center justify-center min-h-[380px]"
+        style={{ perspective: 1400 }}
+      >
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={current.cardId}
-            initial={{ opacity: 0, y: 20, scale: 0.985 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -14, scale: 0.99 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -14 }}
             transition={{ duration: 0.28, ease: [0.2, 0.8, 0.2, 1] }}
             className="relative w-full"
-            style={{ transformStyle: "preserve-3d" }}
           >
             <motion.div
-              className="relative cursor-pointer"
+              className="relative w-full cursor-pointer"
               animate={{ rotateY: flipped ? 180 : 0 }}
               transition={{ type: "spring", stiffness: 120, damping: 18 }}
               style={{ transformStyle: "preserve-3d" }}
               onClick={() => !submitting && setFlipped((f) => !f)}
-              whileHover={reduce ? undefined : { y: -2 }}
             >
-              <CardFace side="front" flipped={flipped}>
+              <CardFace side="front" cardIndex={idx + 1} total={queue.length}>
                 {current.type === "cloze"
                   ? renderCloze(current.front, false)
                   : current.front}
               </CardFace>
-              <CardFace side="back" flipped={flipped}>
-                <div className="space-y-4">
+              <CardFace side="back" cardIndex={idx + 1} total={queue.length}>
+                <div className="space-y-6 text-left">
                   {current.type === "cloze" ? (
-                    <>
-                      <p className="text-[11px] uppercase tracking-wider text-zinc-400">
-                        Question
+                    <div className="space-y-2">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+                        Prompt
                       </p>
-                      <p className="text-lg">
+                      <p className="text-lg leading-snug text-muted-foreground">
                         {renderCloze(current.front, true)}
                       </p>
-                      <div className="h-px bg-zinc-200 dark:bg-zinc-800" />
-                    </>
+                    </div>
                   ) : null}
-                  <div className="whitespace-pre-wrap text-lg leading-relaxed">
-                    {current.back}
+                  <div className="space-y-2">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+                      Answer
+                    </p>
+                    <div className="whitespace-pre-wrap text-[22px] leading-[1.4] tracking-[-0.01em] text-foreground">
+                      {current.back}
+                    </div>
                   </div>
                 </div>
               </CardFace>
@@ -257,9 +267,9 @@ export function StudyClient({ initialCards }: { initialCards: DueCard[] }) {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.18 }}
-                  className="pointer-events-none absolute inset-0 rounded-2xl"
+                  className="pointer-events-none absolute inset-0 rounded-[20px]"
                   style={{
-                    boxShadow: `inset 0 0 0 2px ${RATINGS[flash].flash.replace(" / 0.18", " / 0.6")}`,
+                    boxShadow: `inset 0 0 0 2px ${RATINGS[flash].flash.replace(" / 0.18", " / 0.55")}`,
                     background: RATINGS[flash].flash,
                   }}
                 />
@@ -269,7 +279,7 @@ export function StudyClient({ initialCards }: { initialCards: DueCard[] }) {
         </AnimatePresence>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-10">
         <AnimatePresence mode="wait" initial={false}>
           {!flipped ? (
             <motion.div
@@ -278,10 +288,11 @@ export function StudyClient({ initialCards }: { initialCards: DueCard[] }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.18 }}
+              className="flex flex-col items-center gap-3"
             >
               <Button
                 size="lg"
-                className="w-full group"
+                className="group w-full max-w-sm"
                 onClick={() => setFlipped(true)}
                 disabled={submitting}
               >
@@ -299,6 +310,9 @@ export function StudyClient({ initialCards }: { initialCards: DueCard[] }) {
                   Space
                 </motion.span>
               </Button>
+              <p className="text-[11px] text-muted-foreground">
+                Try to answer before you flip — that&apos;s where recall happens.
+              </p>
             </motion.div>
           ) : (
             <motion.div
@@ -307,54 +321,41 @@ export function StudyClient({ initialCards }: { initialCards: DueCard[] }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
-              className="grid grid-cols-4 gap-2"
+              className="space-y-3"
             >
-              {([0, 1, 2, 3] as const).map((r, i) => (
-                <motion.button
-                  key={r}
-                  type="button"
-                  onClick={() => submit(r)}
-                  disabled={submitting}
-                  initial={reduce ? false : { opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.04, duration: 0.2 }}
-                  whileHover={reduce ? undefined : { y: -2 }}
-                  whileTap={reduce ? undefined : { scale: 0.96 }}
-                  className={`flex h-auto flex-col items-center gap-1 rounded-md border bg-transparent py-3 text-sm font-medium transition-colors disabled:opacity-50 ${RATINGS[r].className}`}
-                >
-                  <span className="font-semibold">{RATINGS[r].label}</span>
-                  <span className="text-[10px] uppercase tracking-wide opacity-70">
-                    {RATINGS[r].hint}
-                  </span>
-                  <kbd className="mt-0.5 rounded border border-current/20 px-1 text-[10px]">
-                    {RATINGS[r].key}
-                  </kbd>
-                </motion.button>
-              ))}
+              <p className="text-center text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+                How did you recall it?
+              </p>
+              <div className="grid grid-cols-4 gap-2">
+                {([0, 1, 2, 3] as const).map((r, i) => (
+                  <motion.button
+                    key={r}
+                    type="button"
+                    onClick={() => submit(r)}
+                    disabled={submitting}
+                    initial={reduce ? false : { opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.04, duration: 0.2 }}
+                    whileHover={reduce ? undefined : { y: -2 }}
+                    whileTap={reduce ? undefined : { scale: 0.96 }}
+                    className="group flex flex-col items-center gap-1.5 rounded-lg border border-border/70 bg-card/40 py-3 text-sm font-medium transition-colors hover:border-foreground/40 hover:bg-card disabled:opacity-50"
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${RATINGS[r].dot}`}
+                    />
+                    <span className="text-sm">{RATINGS[r].label}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      {RATINGS[r].hint}
+                    </span>
+                    <kbd className="rounded border border-border/70 bg-background px-1.5 text-[10px] font-mono text-muted-foreground">
+                      {RATINGS[r].key}
+                    </kbd>
+                  </motion.button>
+                ))}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-
-      <div className="mt-5 flex items-center justify-center gap-4 text-[11px] text-zinc-400 dark:text-zinc-500">
-        <span className="inline-flex items-center gap-1.5">
-          <kbd className="rounded border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 font-mono text-[10px] text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-            Space
-          </kbd>
-          flip
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <kbd className="rounded border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 font-mono text-[10px] text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-            1–4
-          </kbd>
-          rate
-        </span>
-        <Link
-          href="/"
-          className="underline-offset-4 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-        >
-          Exit session
-        </Link>
       </div>
     </div>
   );
@@ -362,36 +363,64 @@ export function StudyClient({ initialCards }: { initialCards: DueCard[] }) {
 
 function CardFace({
   side,
-  flipped,
+  cardIndex,
+  total,
   children,
 }: {
   side: "front" | "back";
-  flipped: boolean;
+  cardIndex: number;
+  total: number;
   children: React.ReactNode;
 }) {
-  const base =
-    "flex min-h-[360px] items-center justify-center rounded-2xl border border-zinc-200 bg-white p-8 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] dark:border-zinc-800 dark:bg-zinc-950";
-  const activeSide = flipped ? "back" : "front";
-  const isActive = side === activeSide;
   return (
     <div
-      className={
-        side === "front" ? `relative ${base}` : `absolute inset-0 ${base}`
-      }
+      className={`${
+        side === "front" ? "relative" : "absolute inset-0"
+      } flex min-h-[380px] flex-col justify-between rounded-[20px] border border-border/70 bg-card p-10 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_12px_32px_-18px_rgba(0,0,0,0.12)] dark:shadow-[0_1px_0_rgba(255,255,255,0.04),0_20px_40px_-24px_rgba(0,0,0,0.7)]`}
       style={{
         backfaceVisibility: "hidden",
         WebkitBackfaceVisibility: "hidden",
         transform: side === "back" ? "rotateY(180deg)" : undefined,
       }}
     >
-      <div className="w-full text-center text-xl leading-relaxed">
-        {children}
+      <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+        <span>{side === "front" ? "Prompt" : "Answer"}</span>
+        <span className="tabular-nums">
+          {String(cardIndex).padStart(2, "0")} / {String(total).padStart(2, "0")}
+        </span>
       </div>
-      {side === "front" && !isActive ? null : side === "front" ? (
-        <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-600">
-          Tap or press space
+
+      <div className="flex flex-1 items-center py-8">
+        <div
+          className={`w-full ${
+            side === "front"
+              ? "text-center text-[26px] leading-[1.35] tracking-[-0.015em] text-foreground"
+              : ""
+          }`}
+        >
+          {children}
         </div>
-      ) : null}
+      </div>
+
+      <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        <span className="opacity-0">·</span>
+        {side === "front" ? (
+          <span className="inline-flex items-center gap-1.5">
+            Tap or press
+            <kbd className="rounded border border-border bg-background px-1.5 py-0.5 font-mono tracking-normal normal-case">
+              space
+            </kbd>
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5">
+            Rate with
+            <kbd className="rounded border border-border bg-background px-1.5 py-0.5 font-mono tracking-normal normal-case">
+              1–4
+            </kbd>
+          </span>
+        )}
+        <span className="opacity-0">·</span>
+      </div>
     </div>
   );
 }
@@ -419,94 +448,80 @@ function SessionSummary({ tally }: { tally: Tally }) {
 
   const container: Variants = {
     hidden: {},
-    show: { transition: { staggerChildren: reduce ? 0 : 0.08, delayChildren: 0.05 } },
+    show: {
+      transition: { staggerChildren: reduce ? 0 : 0.08, delayChildren: 0.05 },
+    },
   };
   const item: Variants = {
     hidden: { opacity: 0, y: 10 },
     show: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.35, ease: [0.2, 0.8, 0.2, 1] as const },
+      transition: { duration: 0.4, ease: [0.2, 0.8, 0.2, 1] as const },
     },
   };
 
   return (
-    <div className="mx-auto flex max-w-xl flex-1 items-center justify-center py-10">
-      <motion.div
-        variants={container}
-        initial="hidden"
-        animate="show"
-        className="relative w-full"
-      >
-        <Confetti fire={fireConfetti && isWin} count={48} />
+    <div className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center py-10">
+      <Confetti fire={fireConfetti && isWin} count={48} />
+      <motion.div variants={container} initial="hidden" animate="show" className="space-y-12">
+        <motion.div variants={item} className="space-y-4">
+          <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+            Session · complete
+          </p>
+          <h1 className="text-[clamp(2.25rem,6vw,4rem)] font-medium leading-[0.98] tracking-[-0.03em]">
+            {headline}
+          </h1>
+          <p className="max-w-md text-[15px] text-muted-foreground">{sub}</p>
+        </motion.div>
 
-        <Card className="relative overflow-hidden">
-          <CardContent className="space-y-7 py-10">
-            <motion.div variants={item} className="space-y-3 text-center">
-              <motion.div
-                className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${
-                  isWin
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
-                    : "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-                }`}
-                initial={reduce ? false : { scale: 0.6, rotate: -8 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ type: "spring", stiffness: 260, damping: 18, delay: 0.15 }}
-              >
-                {isWin ? (
-                  <Check className="h-6 w-6" />
-                ) : (
-                  <Sparkles className="h-6 w-6" />
-                )}
-              </motion.div>
-              <h1 className="text-2xl font-semibold tracking-tight">{headline}</h1>
-              <p className="mx-auto max-w-sm text-sm text-zinc-500 dark:text-zinc-400">
-                {sub}
-              </p>
-            </motion.div>
+        <motion.div variants={item} className="grid grid-cols-12 items-end gap-4 border-y border-border/70 py-8">
+          <div className="col-span-12 md:col-span-5">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+              Recall
+            </p>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="font-sans text-[clamp(4rem,10vw,6.5rem)] font-medium leading-none tracking-[-0.05em] tabular-nums">
+                {Math.round(recallShown)}
+              </span>
+              <span className="text-3xl text-muted-foreground">%</span>
+            </div>
+            <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              {correct} of {reviewed} correct
+            </p>
+          </div>
 
-            <motion.div variants={item} className="flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-5xl font-semibold tracking-tight tabular-nums">
-                  {Math.round(recallShown)}
-                  <span className="text-2xl text-zinc-400">%</span>
+          <div className="col-span-12 md:col-span-7 grid grid-cols-4 gap-3 md:border-l md:border-border/60 md:pl-8">
+            {([0, 1, 2, 3] as const).map((r) => (
+              <div key={r} className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className={`h-1.5 w-1.5 rounded-full ${RATINGS[r].dot}`} />
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                    {RATINGS[r].label}
+                  </p>
                 </div>
-                <div className="mt-1 text-[11px] uppercase tracking-wider text-zinc-500">
-                  Recall · {reviewed} card{reviewed === 1 ? "" : "s"}
-                </div>
+                <p className="text-2xl font-medium tabular-nums tracking-tight">
+                  {tally[r]}
+                </p>
               </div>
-            </motion.div>
+            ))}
+          </div>
+        </motion.div>
 
-            <motion.div variants={item} className="grid grid-cols-4 gap-2">
-              {([0, 1, 2, 3] as const).map((r) => (
-                <div
-                  key={r}
-                  className="rounded-lg border border-zinc-200 p-3 text-center dark:border-zinc-800"
-                >
-                  <div className="text-2xl font-semibold tabular-nums">
-                    {tally[r]}
-                  </div>
-                  <div className="text-xs text-zinc-500">{RATINGS[r].label}</div>
-                </div>
-              ))}
-            </motion.div>
-
-            <motion.div variants={item} className="flex gap-2">
-              <Button asChild variant="outline" className="flex-1">
-                <Link href="/">Back to dashboard</Link>
-              </Button>
-              <Button
-                className="flex-1 group"
-                onClick={() => {
-                  window.location.href = "/study";
-                }}
-              >
-                Keep going
-                <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-              </Button>
-            </motion.div>
-          </CardContent>
-        </Card>
+        <motion.div variants={item} className="flex flex-wrap items-center justify-between gap-3">
+          <Button asChild variant="ghost">
+            <Link href="/">← Back to shelf</Link>
+          </Button>
+          <Button
+            className="group"
+            onClick={() => {
+              window.location.href = "/study";
+            }}
+          >
+            Keep going
+            <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </Button>
+        </motion.div>
       </motion.div>
     </div>
   );
