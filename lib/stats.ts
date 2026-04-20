@@ -66,7 +66,6 @@ export type DeckSummary = {
 };
 
 export async function getUserDecks(userId: string): Promise<DeckSummary[]> {
-  const now = new Date();
   const rows = await db
     .select({
       id: decks.id,
@@ -74,7 +73,7 @@ export async function getUserDecks(userId: string): Promise<DeckSummary[]> {
       description: decks.description,
       updatedAt: decks.updatedAt,
       cardCount: sql<number>`count(distinct ${cards.id})`.as("card_count"),
-      dueNow: sql<number>`count(distinct ${cards.id}) filter (where ${reviews.nextReviewAt} <= ${now})`.as(
+      dueNow: sql<number>`count(distinct ${cards.id}) filter (where ${reviews.nextReviewAt} <= NOW())`.as(
         "due_now",
       ),
     })
