@@ -6,6 +6,10 @@ import { useMemo, useState, useTransition } from "react";
 import {
   ArrowLeft,
   Check,
+  Copy,
+  Globe,
+  Link2,
+  Lock,
   Pencil,
   Play,
   Plus,
@@ -19,6 +23,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { MemoryBar } from "@/components/memory-bar";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { DeckDetail, DeckDetailCard } from "@/lib/decks";
 
 const MATURE = 21;
@@ -66,8 +77,52 @@ export function DeckClient({ deck }: { deck: DeckDetail }) {
   const [adding, setAdding] = useState(false);
   const [deckDeleteOpen, setDeckDeleteOpen] = useState(false);
   const [cardToDelete, setCardToDelete] = useState<DeckDetailCard | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [isPublic, setIsPublic] = useState(deck.isPublic);
+  const [shareToken, setShareToken] = useState(deck.shareToken);
 
   const refresh = () => startTransition(() => router.refresh());
+
+  const shareUrl = shareToken
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/shared/${shareToken}`
+    : null;
+
+  async function enableSharing() {
+    setSharing(true);
+    try {
+      const res = await fetch(`/api/decks/${deck.id}/share`, { method: "POST" });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setShareToken(data.shareToken);
+      setIsPublic(true);
+      toast.success("Sharing enabled — link is ready");
+    } catch {
+      toast.error("Could not enable sharing");
+    } finally {
+      setSharing(false);
+    }
+  }
+
+  async function disableSharing() {
+    setSharing(true);
+    try {
+      const res = await fetch(`/api/decks/${deck.id}/share`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      setIsPublic(false);
+      toast.success("Sharing disabled");
+    } catch {
+      toast.error("Could not disable sharing");
+    } finally {
+      setSharing(false);
+    }
+  }
+
+  function copyShareLink() {
+    if (!shareUrl) return;
+    navigator.clipboard.writeText(shareUrl);
+    toast.success("Link copied to clipboard");
+  }
 
   const composition = useMemo(() => {
     let mature = 0;
@@ -259,6 +314,19 @@ export function DeckClient({ deck }: { deck: DeckDetail }) {
                   >
                     <Pencil className="mr-1.5 h-3.5 w-3.5" />
                     Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShareOpen(true)}
+                    className="text-muted-foreground"
+                  >
+                    {isPublic ? (
+                      <Globe className="mr-1.5 h-3.5 w-3.5 text-emerald-500" />
+                    ) : (
+                      <Link2 className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    {isPublic ? "Shared" : "Share"}
                   </Button>
                   <Button
                     variant="ghost"
@@ -474,6 +542,67 @@ export function DeckClient({ deck }: { deck: DeckDetail }) {
           if (cardToDelete) await deleteCard(cardToDelete.id);
         }}
       />
+
+      <Dialog open={shareOpen} onOpenChange={setShareOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl tracking-tight">
+              Share this deck
+            </DialogTitle>
+            <DialogDescription className="text-[13px] leading-relaxed text-muted-foreground">
+              Anyone with the link can view and import a copy into their own
+              library.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 pt-2">
+            <div className="flex items-center justify-between rounded-lg border border-border/70 bg-card/40 px-4 py-3">
+              <div className="flex items-center gap-3">
+                {isPublic ? (
+                  <Globe className="h-4 w-4 text-emerald-500" />
+                ) : (
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                )}
+                <div>
+                  <p className="text-sm font-medium">
+                    {isPublic ? "Public link active" : "Private"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {isPublic
+                      ? "Visible in the community library"
+                      : "Only you can see this deck"}
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant={isPublic ? "outline" : "default"}
+                onClick={isPublic ? disableSharing : enableSharing}
+                disabled={sharing}
+              >
+                {isPublic ? "Disable" : "Enable"}
+              </Button>
+            </div>
+
+            {isPublic && shareUrl && (
+              <div className="space-y-2">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Share link
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 truncate rounded-md border border-border bg-background px-3 py-2 font-mono text-xs text-muted-foreground">
+                    {shareUrl}
+                  </div>
+                  <Button size="sm" variant="outline" onClick={copyShareLink}>
+                    <Copy className="mr-1 h-3 w-3" />
+                    Copy
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

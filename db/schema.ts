@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   index,
   integer,
   pgTable,
@@ -19,6 +20,8 @@ export const decks = pgTable(
     description: text("description"),
     sourceFilename: text("source_filename"),
     sourcePdfPath: text("source_pdf_path"),
+    isPublic: boolean("is_public").notNull().default(false),
+    shareToken: text("share_token"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -26,7 +29,10 @@ export const decks = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [index("decks_user_idx").on(t.userId)],
+  (t) => [
+    index("decks_user_idx").on(t.userId),
+    uniqueIndex("decks_share_token_idx").on(t.shareToken),
+  ],
 );
 
 export const cards = pgTable(

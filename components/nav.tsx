@@ -39,6 +39,7 @@ function NavLink({
 export function Nav({ email, dueNow }: { email: string; dueNow: number }) {
   const pathname = usePathname();
   const isDecks = pathname === "/" || pathname.startsWith("/decks");
+  const isLibrary = pathname.startsWith("/library");
   const isStats = pathname.startsWith("/stats");
   const isUpload = pathname.startsWith("/upload");
 
@@ -59,6 +60,7 @@ export function Nav({ email, dueNow }: { email: string; dueNow: number }) {
         <nav className="flex items-center gap-6">
           <div className="flex items-center gap-5">
             <NavLink href="/" label="Decks" active={isDecks} />
+            <NavLink href="/library" label="Library" active={isLibrary} />
             <NavLink href="/stats" label="Stats" active={isStats} />
             <NavLink href="/upload" label="Upload" active={isUpload} />
           </div>

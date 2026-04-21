@@ -11,7 +11,7 @@ import {
   useTransform,
   type Variants,
 } from "motion/react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Lightbulb, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Confetti } from "@/components/confetti";
@@ -100,10 +100,35 @@ export function StudyClient({ initialCards }: { initialCards: DueCard[] }) {
   const [tally, setTally] = useState<Tally>({ 0: 0, 1: 0, 2: 0, 3: 0 });
   const [flash, setFlash] = useState<0 | 1 | 2 | 3 | null>(null);
   const [againSeed, setAgainSeed] = useState(0);
+  const [hints, setHints] = useState<string[]>([]);
+  const [hintLevel, setHintLevel] = useState(0);
+  const [hintLoading, setHintLoading] = useState(false);
   const reduce = useReducedMotion();
 
   const current = queue[idx];
   const done = idx >= queue.length;
+
+  const fetchHint = useCallback(async () => {
+    if (!current || hintLoading) return;
+    const nextLevel = hintLevel + 1;
+    if (nextLevel > 3) return;
+    setHintLoading(true);
+    try {
+      const res = await fetch(`/api/cards/${current.cardId}/hint`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ level: nextLevel }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setHints((prev) => [...prev, data.hint]);
+      setHintLevel(nextLevel);
+    } catch {
+      toast.error("Couldn't generate a hint");
+    } finally {
+      setHintLoading(false);
+    }
+  }, [current, hintLevel, hintLoading]);
 
   const progressTarget = queue.length === 0 ? 0 : (idx / queue.length) * 100;
   const progressMV = useMotionValue(0);
@@ -140,6 +165,8 @@ export function StudyClient({ initialCards }: { initialCards: DueCard[] }) {
         }
         await new Promise((r) => setTimeout(r, reduce ? 0 : 180));
         setFlipped(false);
+        setHints([]);
+        setHintLevel(0);
         setIdx((i) => i + 1);
       } catch {
         toast.error("Couldn't save that rating. Try again.");
@@ -161,6 +188,11 @@ export function StudyClient({ initialCards }: { initialCards: DueCard[] }) {
         setFlipped((f) => !f);
         return;
       }
+      if (!flipped && (e.key === "h" || e.key === "H")) {
+        e.preventDefault();
+        fetchHint();
+        return;
+      }
       if (!flipped) return;
       if (e.key === "1") submit(0);
       else if (e.key === "2") submit(1);
@@ -169,7 +201,7 @@ export function StudyClient({ initialCards }: { initialCards: DueCard[] }) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [flipped, done, submit]);
+  }, [flipped, done, submit, fetchHint]);
 
   if (done) return <SessionSummary tally={tally} />;
 
@@ -290,28 +322,89 @@ export function StudyClient({ initialCards }: { initialCards: DueCard[] }) {
               transition={{ duration: 0.18 }}
               className="flex flex-col items-center gap-3"
             >
-              <Button
-                size="lg"
-                className="group w-full max-w-sm"
-                onClick={() => setFlipped(true)}
-                disabled={submitting}
-              >
-                <span>Reveal answer</span>
-                <motion.span
-                  aria-hidden
-                  className="ml-2 inline-flex h-5 items-center rounded-md border border-white/25 bg-white/10 px-1.5 text-[11px] font-medium"
-                  animate={reduce ? undefined : { y: [0, -1.5, 0] }}
-                  transition={{
-                    duration: 1.6,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
+              <AnimatePresence mode="sync">
+                {hints.length > 0 && (
+                  <motion.div
+                    key="hints"
+                    initial={{ opacity: 0, y: 6, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: "auto" }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.25, ease: [0.2, 0.8, 0.2, 1] }}
+                    className="w-full max-w-sm space-y-2"
+                  >
+                    {hints.map((h, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05, duration: 0.25 }}
+                        className="flex items-start gap-2.5 rounded-lg border border-amber-200/60 bg-amber-50/50 px-3.5 py-2.5 dark:border-amber-900/50 dark:bg-amber-950/20"
+                      >
+                        <Lightbulb className="mt-0.5 h-3.5 w-3.5 flex-none text-amber-500" />
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.18em] text-amber-600/80 dark:text-amber-400/80">
+                            Hint {i + 1}
+                          </p>
+                          <p className="text-sm leading-snug text-foreground">
+                            {h}
+                          </p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="flex w-full max-w-sm gap-2">
+                <Button
+                  size="lg"
+                  className="group flex-1"
+                  onClick={() => setFlipped(true)}
+                  disabled={submitting}
                 >
-                  Space
-                </motion.span>
-              </Button>
+                  <span>Reveal answer</span>
+                  <motion.span
+                    aria-hidden
+                    className="ml-2 inline-flex h-5 items-center rounded-md border border-white/25 bg-white/10 px-1.5 text-[11px] font-medium"
+                    animate={reduce ? undefined : { y: [0, -1.5, 0] }}
+                    transition={{
+                      duration: 1.6,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    Space
+                  </motion.span>
+                </Button>
+                {hintLevel < 3 && (
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={fetchHint}
+                    disabled={hintLoading || submitting}
+                    className="gap-1.5 border-amber-200/60 text-amber-700 hover:bg-amber-50/80 hover:text-amber-800 dark:border-amber-900/50 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                  >
+                    {hintLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Lightbulb className="h-3.5 w-3.5" />
+                    )}
+                    <span className="hidden sm:inline">
+                      {hintLevel === 0 ? "Hint" : `Hint ${hintLevel + 1}`}
+                    </span>
+                    <kbd className="hidden rounded border border-amber-300/50 bg-amber-100/50 px-1 py-0.5 font-mono text-[10px] text-amber-600/80 sm:inline dark:border-amber-800/50 dark:bg-amber-950/40 dark:text-amber-400/80">
+                      H
+                    </kbd>
+                  </Button>
+                )}
+              </div>
+
               <p className="text-[11px] text-muted-foreground">
-                Try to answer before you flip — that&apos;s where recall happens.
+                {hints.length > 0
+                  ? hintLevel < 3
+                    ? "Need more? Press H for a stronger hint."
+                    : "Max hints reached — try your best, then flip."
+                  : "Try to answer before you flip — that\u2019s where recall happens."}
               </p>
             </motion.div>
           ) : (

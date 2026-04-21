@@ -18,6 +18,8 @@ export type DeckDetail = {
   id: string;
   title: string;
   description: string | null;
+  isPublic: boolean;
+  shareToken: string | null;
   createdAt: Date;
   updatedAt: Date;
   cards: DeckDetailCard[];
@@ -55,6 +57,8 @@ export async function getDeckDetail(
     id: deck.id,
     title: deck.title,
     description: deck.description,
+    isPublic: deck.isPublic,
+    shareToken: deck.shareToken,
     createdAt: deck.createdAt,
     updatedAt: deck.updatedAt,
     cards: rows.map((r) => ({
