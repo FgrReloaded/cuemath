@@ -1,5 +1,5 @@
 {
-  "name": "cuemath",
+  "name": "@testing/cuemath",
   "version": "1.0.0",
   "private": true,
   "scripts": {
