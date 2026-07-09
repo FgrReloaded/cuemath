@@ -1,9 +1,9 @@
 const db = { find: (id: number) => ({ id }) };
 
-export function getUser(id: number) {
+export function fetchUser(id: number) {
   return db.find(id);
 }
 
 export function run() {
-  return getUser(1);
+  return fetchUser(1);
 }
